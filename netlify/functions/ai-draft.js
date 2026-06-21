@@ -1,6 +1,6 @@
-// netlify/functions/ai-draft.js
-// 有料プラン向け：同期タイムアウト26秒前提（netlify.toml で [functions."ai-draft"] timeout = 26）。
-// Web検索を最大2回に絞り、Sonnetで生成。24秒で打ち切ってエラーを返す。
+// netlify/functions/ai-draft.js  — 診断版
+// 502の原因を特定するため、Anthropic APIの実際のエラー内容を画面とログに出す。
+// 原因が分かったら、detail返却部分は本番用に簡略化してOK。
 
 const ok = (req) =>
   !!process.env.ADMIN_TOKEN && req.headers.get("x-admin-token") === process.env.ADMIN_TOKEN;
@@ -24,10 +24,11 @@ export default async (req) => {
 最後に必ず次のキーのJSONのみを返すこと（前置き・マークダウン記号・コードブロック禁止）:
 {"title":"30字以内の見出し","teaser":"解錠前に見せる1文の煽り","conclusion":"結論を2文","drivers":"指標・根拠を3点、改行区切り","scenarios":"想定シナリオを2〜3点、改行区切り","cautions":"注意点・リスク管理を1〜2文"}`;
 
-  // 26秒制限の手前（24秒）で打ち切る
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 24000);
 
+  let httpStatus = 0;
+  let rawText = "";
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -45,22 +46,36 @@ export default async (req) => {
       }),
     });
     clearTimeout(t);
+    httpStatus = r.status;
 
     const data = await r.json();
-    if (data.error) return Response.json({ error: "API応答エラー" }, { status: 502 });
 
-    const text = (data.content || [])
+    // Anthropic がエラーを返した場合（モデル名/ツール/権限/クレジット 等）
+    if (!r.ok || data.error) {
+      const detail = data?.error?.message || JSON.stringify(data).slice(0, 400);
+      console.error("[ai-draft] anthropic error", httpStatus, detail);
+      return Response.json({ error: "anthropic_error", status: httpStatus, detail }, { status: 502 });
+    }
+
+    rawText = (data.content || [])
       .filter((b) => b.type === "text")
       .map((b) => b.text)
       .join("\n")
       .replace(/```json|```/g, "")
       .trim();
-    const m = text.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(m ? m[0] : text);
+
+    const m = rawText.match(/\{[\s\S]*\}/);
+    if (!m) {
+      console.error("[ai-draft] no JSON in response:", rawText.slice(0, 300));
+      return Response.json({ error: "no_json", detail: rawText.slice(0, 300) }, { status: 502 });
+    }
+    const parsed = JSON.parse(m[0]);
     return Response.json(parsed);
   } catch (e) {
     clearTimeout(t);
-    const msg = e.name === "AbortError" ? "生成が時間内に終わりませんでした" : "生成に失敗しました";
-    return Response.json({ error: msg }, { status: 502 });
+    console.error("[ai-draft] exception", e?.name, e?.message);
+    const detail =
+      e?.name === "AbortError" ? "timeout(24s)" : `${e?.name || "error"}: ${e?.message || ""}`;
+    return Response.json({ error: "exception", detail, raw: rawText.slice(0, 200) }, { status: 502 });
   }
 };
