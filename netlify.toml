@@ -6,10 +6,6 @@
 [functions]
   node_bundler = "esbuild"
 
-# AI下書き関数だけ同期タイムアウトを26秒に引き上げ（Pro/Enterprise）
-[functions."ai-draft"]
-  timeout = 26
-
 # SPA フォールバック（Functions を除く）
 [[redirects]]
   from = "/*"
