@@ -27,3 +27,25 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .sparkle{position:absolute;color:var(--blush);opacity:0;animation:tw 3s ease-in-out infinite}
 @keyframes tw{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:.9;transform:scale(1.15)}}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+/* Markdown(表)・Mermaid図のスタイル */
+.rich{font-size:14px;line-height:1.9;color:var(--text)}
+.rich h2{font-family:var(--serif);font-size:16px;color:var(--rose);margin:18px 0 8px;letter-spacing:.02em}
+.rich h3{font-size:14px;color:var(--gold);margin:14px 0 6px}
+.rich p{margin:8px 0}
+.rich ul,.rich ol{margin:8px 0;padding-left:20px}
+.rich li{margin:3px 0}
+.rich strong{color:var(--blush)}
+.rich a{color:var(--rose)}
+.rich table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;overflow:hidden;border-radius:12px;border:1px solid var(--line)}
+.rich thead{background:linear-gradient(135deg, rgba(244,166,192,.18), rgba(227,192,122,.12))}
+.rich th,.rich td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+.rich th{color:var(--rose);font-weight:700}
+.rich tbody tr:last-child td{border-bottom:none}
+.rich tbody tr:nth-child(even){background:rgba(255,255,255,.02)}
+.rich code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 5px;font-size:12px}
+.rich pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto}
+.rich pre code{border:none;background:none;padding:0}
+.rich blockquote{border-left:3px solid var(--rose-deep);margin:10px 0;padding:2px 12px;color:var(--muted)}
+.mermaid-fig{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0;text-align:center;overflow:auto}
+.mermaid-fig svg{max-width:100%;height:auto}

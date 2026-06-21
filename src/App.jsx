@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import RichText from "./RichText.jsx";
 
 /* =========================================================================
    トレーダーゆずき｜ゴールドXAUUSD革命  — プレゼント配布プラットフォーム（本番）
@@ -12,6 +13,10 @@ const INSTRUMENTS = {
   usdjpy: { label: "ドル円 USD/JPY", short: "USD/JPY" },
   xauusd: { label: "ゴールド XAU/USD", short: "XAU/USD" },
   btcusd: { label: "ビットコイン BTC/USD", short: "BTC/USD" },
+};
+const TYPES = {
+  outlook: { label: "今後の展望", short: "展望" },
+  indicator: { label: "経済指標の予想展望", short: "指標予想" },
 };
 const FN = "/.netlify/functions";
 
@@ -206,6 +211,7 @@ function PresentCard({ a, unlocked, onOpen }) {
         <span style={S.chip}>{ins.short}</span>
         <span style={S.lockTag}>{unlocked ? "♡ ひらける" : "🎀 あいことば"}</span>
       </div>
+      <span style={S.typeBadge}>{(TYPES[a.type] || TYPES.outlook).label}</span>
       <h3 style={S.cardTitle}>{a.title}</h3>
       <p style={S.cardTeaser}>{a.teaser}</p>
       <span style={S.cardCta}>{unlocked ? "記事をよむ →" : "うけとる →"}</span>
@@ -233,13 +239,22 @@ function ReadModal({
           ×
         </button>
         <span style={S.chip}>{ins.short}</span>
+        <span style={S.typeBadge}>{(TYPES[meta.type] || TYPES.outlook).label}</span>
         <h3 style={S.modalTitle}>{meta.title}</h3>
 
         {unlocked && article ? (
           <div className="reveal">
             <Block label="結論" body={article.conclusion} accent />
-            <Block label="指標・根拠からの展望" body={article.drivers} />
-            <Block label="シナリオ" body={article.scenarios} />
+            {article.bodyMd ? (
+              <div style={S.block}>
+                <RichText md={article.bodyMd} />
+              </div>
+            ) : (
+              <>
+                <Block label="指標・根拠からの展望" body={article.drivers} />
+                <Block label="シナリオ" body={article.scenarios} />
+              </>
+            )}
             <Block label="注意点" body={article.cautions} />
             <div style={S.disclaimer}>
               ※本レポートは教育・情報提供を目的としたもので、投資助言ではありません。
@@ -504,10 +519,12 @@ function Funnel({ keyword }) {
 function Editor({ api, initial, onCancel, onSave }) {
   const blank = {
     id: "a" + Date.now(),
+    type: "outlook",
     instrument: "xauusd",
     title: "",
     teaser: "",
     conclusion: "",
+    bodyMd: "",
     drivers: "",
     scenarios: "",
     cautions: "",
@@ -525,7 +542,7 @@ function Editor({ api, initial, onCancel, onSave }) {
     try {
       const r = await api("ai-draft", {
         method: "POST",
-        body: JSON.stringify({ instrument: f.instrument }),
+        body: JSON.stringify({ instrument: f.instrument, type: f.type }),
       });
       const p = await r.json();
       if (p.error) throw new Error(p.error);
@@ -534,8 +551,7 @@ function Editor({ api, initial, onCancel, onSave }) {
         title: p.title || prev.title,
         teaser: p.teaser || prev.teaser,
         conclusion: p.conclusion || prev.conclusion,
-        drivers: p.drivers || prev.drivers,
-        scenarios: p.scenarios || prev.scenarios,
+        bodyMd: p.bodyMd || prev.bodyMd,
         cautions: p.cautions || prev.cautions,
       }));
     } catch {
@@ -555,6 +571,21 @@ function Editor({ api, initial, onCancel, onSave }) {
       </div>
 
       <div style={S.field}>
+        <label style={S.label}>レポート種別</label>
+        <div style={S.segWrap}>
+          {Object.entries(TYPES).map(([k, v]) => (
+            <button
+              key={k}
+              style={{ ...S.seg, ...(f.type === k ? S.segOn : {}) }}
+              onClick={() => setF({ ...f, type: k })}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={S.field}>
         <label style={S.label}>マーケット</label>
         <div style={S.segWrap}>
           {Object.entries(INSTRUMENTS).map(([k, v]) => (
@@ -570,15 +601,27 @@ function Editor({ api, initial, onCancel, onSave }) {
       </div>
 
       <button style={S.aiBtn} onClick={aiDraft} disabled={aiLoading}>
-        {aiLoading ? "生成中…（Web検索→展望をまとめています）" : "✦ AIで最新展望を下書き"}
+        {aiLoading
+          ? "生成中…"
+          : `✦ AIで「${(TYPES[f.type] || TYPES.outlook).label}」を下書き`}
       </button>
       {aiErr && <div style={S.errText}>{aiErr}</div>}
 
       <Field label="タイトル" v={f.title} onChange={set("title")} />
       <Field label="ティザー（解錠前に見せる1文）" v={f.teaser} onChange={set("teaser")} />
       <Field label="結論" v={f.conclusion} onChange={set("conclusion")} area />
-      <Field label="指標・根拠からの展望" v={f.drivers} onChange={set("drivers")} area />
-      <Field label="シナリオ" v={f.scenarios} onChange={set("scenarios")} area />
+      <div style={S.field}>
+        <label style={S.label}>本文（Markdown・表や図が使えます）</label>
+        <textarea
+          style={{ ...S.input, minHeight: 220, resize: "vertical", fontFamily: "ui-monospace,monospace" }}
+          value={f.bodyMd}
+          onChange={set("bodyMd")}
+          placeholder={"## 見出し\n\n| 項目 | 内容 |\n|---|---|\n| 前回 | ... |\n| 予想 | ... |\n\n図を入れる場合:\n```mermaid\nflowchart LR\n  A[上振れ] --> B[ドル円↑]\n```"}
+        />
+        <div style={S.hint}>
+          GFMの表（| 見出し |、区切り行 |---|）と、```mermaid 図に対応。AI下書きが自動で表を入れます。
+        </div>
+      </div>
       <Field label="注意点" v={f.cautions} onChange={set("cautions")} area />
 
       <div style={S.field}>
@@ -735,6 +778,8 @@ const S = {
   chip: { fontSize: 11, fontWeight: 600, color: "var(--gold)", border: "1px solid var(--gold)", borderRadius: 999, padding: "3px 11px" },
   chipSm: { fontSize: 10, fontWeight: 600, color: "var(--gold)", border: "1px solid var(--line)", borderRadius: 999, padding: "2px 8px" },
   lockTag: { fontSize: 11, color: "var(--rose)" },
+  typeBadge: { alignSelf: "flex-start", fontSize: 10, fontWeight: 700, color: "var(--rose-deep)", background: "rgba(244,166,192,.15)", border: "1px solid var(--rose-deep)", borderRadius: 999, padding: "2px 9px" },
+  hint: { fontSize: 11, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 },
   cardTitle: { fontFamily: "var(--serif)", fontSize: 17, lineHeight: 1.5, margin: 0 },
   cardTeaser: { fontSize: 13, color: "var(--muted)", lineHeight: 1.7, flex: 1 },
   cardCta: { fontSize: 13, color: "var(--rose)", fontWeight: 700 },
