@@ -1,0 +1,29 @@
+:root{
+  --bg:#16122E; --bg2:#211A45; --surface:#271F52; --line:#3A2F63;
+  --gold:#E3C07A; --rose:#F4A6C0; --rose-deep:#E07BA0; --blush:#FBE3EC;
+  --text:#F7F1F8; --muted:#B0A6CC;
+  --serif: Georgia,"Hiragino Mincho ProN","Yu Mincho",serif;
+  --sans: system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+}
+*{box-sizing:border-box}
+html,body,#root{margin:0;min-height:100%}
+body{
+  font-family:var(--sans); color:var(--text);
+  background:
+    radial-gradient(900px 420px at 80% -8%, rgba(244,166,192,.28) 0%, transparent 60%),
+    radial-gradient(800px 400px at 8% 6%, rgba(227,192,122,.18) 0%, transparent 55%),
+    var(--bg);
+}
+button{font-family:var(--sans);cursor:pointer;border:none}
+input,textarea{font-family:var(--sans)}
+input::placeholder,textarea::placeholder{color:#6f6699}
+.card{transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease}
+.card:hover{transform:translateY(-4px);border-color:var(--rose);box-shadow:0 14px 34px rgba(224,123,160,.22)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.pop{animation:pop .24s ease}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.reveal{animation:reveal .42s ease}
+@keyframes reveal{from{opacity:0}to{opacity:1}}
+.sparkle{position:absolute;color:var(--blush);opacity:0;animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:.9;transform:scale(1.15)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
