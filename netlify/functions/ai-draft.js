@@ -12,13 +12,16 @@ const LABELS = {
   btcusd: "ビットコイン BTC/USD",
 };
 
-function buildPrompt(label, type) {
+function buildPrompt(label, type, indicatorName) {
   const common = `出力は必ず次のキーのJSONのみ（前置き・コードブロック記号なし）:
 {"title":"30字以内の見出し","teaser":"解錠前に見せる1文の煽り","conclusion":"結論を2文","bodyMd":"本文(Markdown)","cautions":"注意点・リスク管理を1〜2文"}
 bodyMd の中では Markdown を使い、必ず1つ以上の「表」を含めること。GFMの表記法（| 見出し | ... | と区切り行 |---|）を使う。確定していない数値・日付は「（要確認）」と書く。`;
 
   if (type === "indicator") {
-    return `あなたは日本語のFXアナリストです。${label} に影響する重要な経済指標（例: 米CPI、雇用統計(NFP)、FOMC、日銀会合 等から1つ選ぶ）について、発表前の「予想展望レポート」のたたき台を作成してください。
+    const target = indicatorName
+      ? `対象の経済指標は「${indicatorName}」とする。`
+      : `${label} に影響する重要な経済指標を1つ選ぶ。`;
+    return `あなたは日本語のFXアナリストです。${target} この指標の発表前「予想展望レポート」のたたき台を、${label} への影響を中心に作成してください。
 bodyMd には次を含めること:
 1) 「## 指標サマリー」: 指標名／発表予定／前回／市場予想／重要度 を表で（数値は「（要確認）」可）
 2) 「## 結果別シナリオ」: 上振れ／予想通り／下振れ の3行で、${label}の想定反応と対応を表で
@@ -42,6 +45,7 @@ export default async (req) => {
   try { body = await req.json(); } catch {}
   const label = LABELS[body.instrument] || "ドル円 USD/JPY";
   const type = body.type === "indicator" ? "indicator" : "outlook";
+  const indicatorName = typeof body.indicatorName === "string" ? body.indicatorName.trim() : "";
 
   let rawText = "";
   try {
@@ -55,7 +59,7 @@ export default async (req) => {
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 1600,
-        messages: [{ role: "user", content: buildPrompt(label, type) }],
+        messages: [{ role: "user", content: buildPrompt(label, type, indicatorName) }],
       }),
     });
     const data = await r.json();

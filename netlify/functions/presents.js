@@ -6,8 +6,8 @@ export default async () => {
   const data = raw ? JSON.parse(raw) : { settings: { globalKeyword: "" }, articles: [] };
   const presents = data.articles
     .filter((a) => a.status === "published")
-    .map(({ id, instrument, title, teaser, type }) => ({
-      id, instrument, title, teaser, type: type || "outlook",
+    .map(({ id, instrument, title, teaser, type, indicatorName }) => ({
+      id, instrument, title, teaser, type: type || "outlook", indicatorName: indicatorName || "",
     }));
   return Response.json({ presents });
 };
