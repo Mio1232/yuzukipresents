@@ -18,6 +18,21 @@ const TYPES = {
   outlook: { label: "今後の展望", short: "展望" },
   indicator: { label: "経済指標の予想展望", short: "指標予想" },
 };
+const INDICATORS = [
+  "米雇用統計（NFP）",
+  "米CPI（消費者物価指数）",
+  "米PCE（個人消費支出物価）",
+  "FOMC（米金融政策）",
+  "米ISM製造業景況指数",
+  "米ISM非製造業景況指数",
+  "JOLTS（求人件数）",
+  "米小売売上高",
+  "米GDP",
+  "ミシガン大消費者信頼感",
+  "日銀金融政策決定会合",
+  "日本CPI",
+  "ECB理事会",
+];
 const FN = "/.netlify/functions";
 
 export default function App() {
@@ -211,7 +226,10 @@ function PresentCard({ a, unlocked, onOpen }) {
         <span style={S.chip}>{ins.short}</span>
         <span style={S.lockTag}>{unlocked ? "♡ ひらける" : "🎀 あいことば"}</span>
       </div>
-      <span style={S.typeBadge}>{(TYPES[a.type] || TYPES.outlook).label}</span>
+      <span style={S.typeBadge}>
+        {(TYPES[a.type] || TYPES.outlook).label}
+        {a.type === "indicator" && a.indicatorName ? `・${a.indicatorName}` : ""}
+      </span>
       <h3 style={S.cardTitle}>{a.title}</h3>
       <p style={S.cardTeaser}>{a.teaser}</p>
       <span style={S.cardCta}>{unlocked ? "記事をよむ →" : "うけとる →"}</span>
@@ -239,7 +257,10 @@ function ReadModal({
           ×
         </button>
         <span style={S.chip}>{ins.short}</span>
-        <span style={S.typeBadge}>{(TYPES[meta.type] || TYPES.outlook).label}</span>
+        <span style={S.typeBadge}>
+          {(TYPES[meta.type] || TYPES.outlook).label}
+          {meta.type === "indicator" && meta.indicatorName ? `・${meta.indicatorName}` : ""}
+        </span>
         <h3 style={S.modalTitle}>{meta.title}</h3>
 
         {unlocked && article ? (
@@ -521,6 +542,7 @@ function Editor({ api, initial, onCancel, onSave }) {
     id: "a" + Date.now(),
     type: "outlook",
     instrument: "xauusd",
+    indicatorName: "",
     title: "",
     teaser: "",
     conclusion: "",
@@ -532,6 +554,9 @@ function Editor({ api, initial, onCancel, onSave }) {
     updatedAt: Date.now(),
   };
   const [f, setF] = useState(initial || blank);
+  const [customInd, setCustomInd] = useState(
+    !!(initial && initial.indicatorName && !INDICATORS.includes(initial.indicatorName))
+  );
   const [aiLoading, setAiLoading] = useState(false);
   const [aiErr, setAiErr] = useState("");
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -542,7 +567,7 @@ function Editor({ api, initial, onCancel, onSave }) {
     try {
       const r = await api("ai-draft", {
         method: "POST",
-        body: JSON.stringify({ instrument: f.instrument, type: f.type }),
+        body: JSON.stringify({ instrument: f.instrument, type: f.type, indicatorName: f.indicatorName }),
       });
       const p = await r.json();
       if (p.error) throw new Error(p.error);
@@ -599,6 +624,42 @@ function Editor({ api, initial, onCancel, onSave }) {
           ))}
         </div>
       </div>
+
+      {f.type === "indicator" && (
+        <div style={S.field}>
+          <label style={S.label}>対象の経済指標</label>
+          <select
+            style={{ ...S.input, appearance: "auto" }}
+            value={customInd ? "__custom__" : f.indicatorName || ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "__custom__") {
+                setCustomInd(true);
+                if (INDICATORS.includes(f.indicatorName)) setF({ ...f, indicatorName: "" });
+              } else {
+                setCustomInd(false);
+                setF({ ...f, indicatorName: v });
+              }
+            }}
+          >
+            <option value="">指標を選択…</option>
+            {INDICATORS.map((x) => (
+              <option key={x} value={x}>
+                {x}
+              </option>
+            ))}
+            <option value="__custom__">その他（自由入力）</option>
+          </select>
+          {customInd && (
+            <input
+              style={{ ...S.input, marginTop: 8 }}
+              value={f.indicatorName}
+              onChange={(e) => setF({ ...f, indicatorName: e.target.value })}
+              placeholder="指標名を入力（例：米貿易収支）"
+            />
+          )}
+        </div>
+      )}
 
       <button style={S.aiBtn} onClick={aiDraft} disabled={aiLoading}>
         {aiLoading
